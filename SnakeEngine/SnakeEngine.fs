@@ -1,4 +1,5 @@
 ﻿namespace SnakeEngine
+open System
 
 module EngineTypes =
     type Point = { X: int; Y: int }
@@ -24,16 +25,14 @@ module Utils =
           Snake = []
           Apple = { X = 16; Y = 2} }
     
-    let pointEq (p1: Point) (p2: Point) = p1 = p2
-
     let nextHead (state: GameState) = 
         if List.isEmpty state.Snake then
             { X = 2; Y = 2}
         else
             let { X = snakeX; Y = snakeY } = 
-                List.head state.Snake
+                List.last state.Snake
             let { X = moveX; Y = moveY } =
-                List.head state.Moves
+                List.last state.Moves
             
             { X = (snakeX + moveX) % state.Cols
               Y = (snakeY + moveY) % state.Rows }
@@ -47,8 +46,8 @@ module Utils =
     let isValidMove move state =
         match state.Moves with
         | [] -> true // this should never be the case as state.Moves shouldn't be empty
-        | lastMove :: _ ->
-            lastMove.X + move.X <> 0 || lastMove.Y + move.Y <> 0
+        | lastToApply :: _ ->
+            lastToApply.X + move.X <> 0 || lastToApply.Y + move.Y <> 0
 
     let nextMoves state =
         if List.length state.Moves > 1 then
@@ -56,11 +55,30 @@ module Utils =
         else
             state.Moves
     
-    // let nextApple
+    let nextApple state (rnd: Random) =
+        if willEat state then
+            { X = rnd.Next(0, state.Cols); Y = rnd.Next(0, state.Rows) }
+        else
+            state.Apple
 
-    let next (old: GameState) : GameState =
-        { Cols = old.Cols
-          Rows = old.Rows
-          Moves = []
-          Snake = []
-          Apple = north }
+    let nextSnake state =
+        if willCrash state then
+            []
+        else if willEat state then
+            List.append state.Snake [nextHead state] 
+        else 
+            List.append (List.tail state.Snake) [nextHead state]
+
+    let next currentState rnd : GameState =
+        { Cols = currentState.Cols
+          Rows = currentState.Rows
+          Moves = nextMoves currentState
+          Snake = nextSnake currentState
+          Apple = nextApple currentState rnd }
+    
+    let enqueue move state =
+        if isValidMove move state then
+            let newMoves = List.append state.Moves [move]
+            { state with Moves = newMoves }
+        else
+            state
