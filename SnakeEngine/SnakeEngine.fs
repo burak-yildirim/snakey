@@ -1,5 +1,6 @@
 ﻿namespace SnakeEngine
 open System
+open System.Collections.Generic
 
 module EngineTypes =
     type Point = { X: int; Y: int }
@@ -25,7 +26,18 @@ module Utils =
           Snake = []
           Apple = { X = 16; Y = 2} }
     
-    let nextHead (state: GameState) = 
+    let safeTail list =
+        match list with
+        | [] -> []
+        | l -> List.tail l
+    
+    let rec modulo x y =
+        if x < 0 then
+            modulo (x + y) y
+        else
+            x % y
+    
+    let nextHead state = 
         if List.isEmpty state.Snake then
             { X = 2; Y = 2}
         else
@@ -34,8 +46,8 @@ module Utils =
             let { X = moveX; Y = moveY } =
                 List.last state.Moves
             
-            { X = (snakeX + moveX) % state.Cols
-              Y = (snakeY + moveY) % state.Rows }
+            { X = modulo (snakeX + moveX) state.Cols
+              Y = modulo (snakeY + moveY) state.Rows }
     
     let willEat state = (nextHead state) = state.Apple
     
@@ -55,9 +67,11 @@ module Utils =
         else
             state.Moves
     
-    let nextApple state (rnd: Random) =
+    let nextApple state getRandom =
         if willEat state then
-            { X = rnd.Next(0, state.Cols); Y = rnd.Next(0, state.Rows) }
+            { X = getRandom 0 state.Cols; Y = getRandom 0 state.Rows }
+        else if willCrash state then
+            { X = 16; Y = 2 }
         else
             state.Apple
 
@@ -65,16 +79,16 @@ module Utils =
         if willCrash state then
             []
         else if willEat state then
-            List.append state.Snake [nextHead state] 
+            List.append state.Snake [nextHead state]
         else 
-            List.append (List.tail state.Snake) [nextHead state]
+            List.append (safeTail state.Snake) [nextHead state]
 
-    let next currentState rnd : GameState =
+    let next currentState getRandom : GameState =
         { Cols = currentState.Cols
           Rows = currentState.Rows
           Moves = nextMoves currentState
           Snake = nextSnake currentState
-          Apple = nextApple currentState rnd }
+          Apple = nextApple currentState getRandom }
     
     let enqueue move state =
         if isValidMove move state then
@@ -82,3 +96,10 @@ module Utils =
             { state with Moves = newMoves }
         else
             state
+    
+    let adjust index (f: 'a -> 'a) (aList: 'a list) =
+         List.mapi (fun i x -> if index = i then (f x) else x) aList
+    let always (x: 'a) (y: 'b) = x
+    let strJoin seperator (sList: IEnumerable<string>) = String.Join(seperator, sList)
+    let epoch () = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+    let partial f x y = f(x, y)
