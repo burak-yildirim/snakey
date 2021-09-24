@@ -18,11 +18,27 @@ module Main =
         | ConsoleKey.A -> gameState <- Utils.enqueue Utils.west gameState
         | _ -> ()
 
+    let clearGameTable () =
+        let cleanStr =
+            " "
+            |> String.replicate Console.BufferWidth
+            |> Seq.replicate Console.BufferHeight
+            |> Utils.partial (String.Join) "\n"
+
+        Console.SetCursorPosition(0, 0)
+        Console.Write(cleanStr)
+        Console.SetCursorPosition(0, 0)
+        ()
+    
     let rec drawLoop getRandom = async{
         gameState <- Utils.next gameState getRandom
         let map =  gameState |> Table.fromState |> Table.toString
-        Console.Clear()
+        
+        Console.CursorVisible <- false
+        Console.SetBufferSize(Console.WindowWidth, Console.WindowHeight)
+        clearGameTable ()
         Console.Write(map)
+        
         do! Async.Sleep(100)
         return! drawLoop getRandom
     }
