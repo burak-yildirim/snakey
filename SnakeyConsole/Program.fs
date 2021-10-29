@@ -18,6 +18,7 @@ module Main =
         | ConsoleKey.A -> gameState <- Utils.enqueue Utils.west gameState
         | _ -> ()
 
+    /// Only to be used on Windows systems.
     let clearGameTable () =
         let cleanStr =
             " "
@@ -34,10 +35,17 @@ module Main =
         gameState <- Utils.next gameState getRandom
         let map =  gameState |> Table.fromState |> Table.toString
         
-        Console.CursorVisible <- false
-        Console.SetBufferSize(Console.WindowWidth, Console.WindowHeight)
-        clearGameTable ()
-        Console.Write(map)
+        match Environment.OSVersion.Platform with
+        // Windows platforms
+        | PlatformID.Win32NT ->
+            Console.CursorVisible <- false
+            Console.SetBufferSize(Console.WindowWidth, Console.WindowHeight)
+            clearGameTable ()
+            Console.Write(map)
+        // Default. This option is based on *nix systems.
+        | _ ->
+            Console.Clear()
+            Console.Write(map)
         
         do! Async.Sleep(100)
         return! drawLoop getRandom
